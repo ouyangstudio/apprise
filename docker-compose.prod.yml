@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Apprise CLI - 用于发送通知
+  apprise:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apprise-cli
+    restart: "no"
+    volumes:
+      # Mount configuration directory
+      - ./config:/config
+    environment:
+      # Set log level
+      - APPRISE_LOG_LEVEL=info
+    # Run with --help by default to show usage
+    command: ["--help"]
+
+  # Apprise API Server - 需要使用官方镜像
+  apprise-api:
+    image: caronc/apprise-api:latest
+    container_name: apprise-api-server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount configuration directory
+      - ./config:/config
+    environment:
+      # Set log level
+      - APPRISE_LOG_LEVEL=info
+      # Default configuration location
+      - APPRISE_CONFIG=/config/apprise.conf

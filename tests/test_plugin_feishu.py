@@ -58,14 +58,14 @@ apprise_url_tests = (
     (
         "feishu://abc123",
         {
-            # Test token
+            # Test token (Webhook mode)
             "instance": NotifyFeishu,
         },
     ),
     (
         "feishu://?token=abc123",
         {
-            # Test token
+            # Test token via query string (Webhook mode)
             "instance": NotifyFeishu,
         },
     ),
@@ -94,6 +94,59 @@ apprise_url_tests = (
             # Throws a series of i/o exceptions with this flag
             # is set and tests that we gracefully handle them
             "test_requests_exceptions": True,
+        },
+    ),
+    # App Mode Tests
+    (
+        "feishu://app/",
+        {
+            "instance": TypeError,
+        },
+    ),
+    (
+        "feishu://app/cli_abc123",
+        {
+            "instance": TypeError,
+        },
+    ),
+    (
+        "feishu://app/cli_abc123/secret456",
+        {
+            "instance": TypeError,
+        },
+    ),
+    (
+        "feishu://app/cli_abc123/secret456/user@example.com",
+        {
+            # Test App mode with single email
+            "instance": NotifyFeishu,
+        },
+    ),
+    (
+        "feishu://app/cli_abc123/secret456/user1@example.com/user2@example.com/",
+        {
+            # Test App mode with multiple emails
+            "instance": NotifyFeishu,
+        },
+    ),
+    (
+        "feishu://app/cli_abc123/secret456/user@example.com/?to=other@example.com",
+        {
+            # Test App mode with email in path and query string
+            "instance": NotifyFeishu,
+        },
+    ),
+    (
+        "feishu://app/cli_abc123/secret456/invalid-email/",
+        {
+            "instance": TypeError,
+        },
+    ),
+    (
+        "feishu://app/?app_id=cli_abc123&app_secret=secret456&to=user@example.com",
+        {
+            # Test App mode via query string
+            "instance": NotifyFeishu,
         },
     ),
 )
