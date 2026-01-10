@@ -112,13 +112,13 @@ class NotifyFeishu(NotifyBase):
                 "private": True,
                 "regex": (r"^[A-Z0-9_-]+$", "i"),
             },
-            "app_id": {
+            "feishu_app_id": {
                 "name": _("App ID"),
                 "type": "string",
                 "private": True,
                 "regex": (r"^cli_[a-z0-9]+$", "i"),
             },
-            "app_secret": {
+            "feishu_app_secret": {
                 "name": _("App Secret"),
                 "type": "string",
                 "private": True,
@@ -143,11 +143,11 @@ class NotifyFeishu(NotifyBase):
             "token": {
                 "alias_of": "token",
             },
-            "app_id": {
-                "alias_of": "app_id",
+            "feishu_app_id": {
+                "alias_of": "feishu_app_id",
             },
-            "app_secret": {
-                "alias_of": "app_secret",
+            "feishu_app_secret": {
+                "alias_of": "feishu_app_secret",
             },
             "to": {
                 "alias_of": "targets",
@@ -170,22 +170,23 @@ class NotifyFeishu(NotifyBase):
         if app_id and app_secret:
             # App Mode
             self.mode = FeishuMode.APP
-            self.token = None
+            # Don't set token to None explicitly
+            # as it may conflict with base class properties
 
             # Validate App ID
-            self.app_id = validate_regex(
-                app_id, *self.template_tokens["app_id"]["regex"]
+            self.feishu_app_id = validate_regex(
+                app_id, *self.template_tokens["feishu_app_id"]["regex"]
             )
-            if not self.app_id:
+            if not self.feishu_app_id:
                 msg = f"The Feishu App ID specified ({app_id}) is invalid."
                 self.logger.warning(msg)
                 raise TypeError(msg)
 
             # Validate App Secret
-            self.app_secret = validate_regex(
-                app_secret, *self.template_tokens["app_secret"]["regex"]
+            self.feishu_app_secret = validate_regex(
+                app_secret, *self.template_tokens["feishu_app_secret"]["regex"]
             )
-            if not self.app_secret:
+            if not self.feishu_app_secret:
                 msg = f"The Feishu App Secret specified ({app_secret}) is invalid."
                 self.logger.warning(msg)
                 raise TypeError(msg)
@@ -208,9 +209,8 @@ class NotifyFeishu(NotifyBase):
         elif token:
             # Webhook Mode
             self.mode = FeishuMode.WEBHOOK
-            self.app_id = None
-            self.app_secret = None
-            self.targets = []
+            # Don't set app_id, app_secret, targets to None explicitly
+            # as they may conflict with base class properties
 
             self.token = validate_regex(
                 token, *self.template_tokens["token"]["regex"]
@@ -234,26 +234,26 @@ class NotifyFeishu(NotifyBase):
         current_time = int(time())
 
         # Check cache
-        if self.app_id in NotifyFeishu._tenant_token_cache:
-            cached = NotifyFeishu._tenant_token_cache[self.app_id]
+        if self.feishu_app_id in NotifyFeishu._tenant_token_cache:
+            cached = NotifyFeishu._tenant_token_cache[self.feishu_app_id]
             if cached["expires_at"] > current_time:
                 # Token is still valid
                 self.logger.debug(
-                    f"Using cached tenant_access_token for {self.app_id}"
+                    f"Using cached tenant_access_token for {self.feishu_app_id}"
                 )
                 return cached["token"]
 
         # Need to fetch new token
-        self.logger.debug(f"Fetching new tenant_access_token for {self.app_id}")
+        self.logger.debug(f"Fetching new tenant_access_token for {self.feishu_app_id}")
 
         headers = {
-            "User-Agent": self.app_id,
+            "User-Agent": self.feishu_app_id,
             "Content-Type": "application/json",
         }
 
         payload = {
-            "app_id": self.app_id,
-            "app_secret": self.app_secret,
+            "app_id": self.feishu_app_id,
+            "app_secret": self.feishu_app_secret,
         }
 
         try:
@@ -288,13 +288,13 @@ class NotifyFeishu(NotifyBase):
 
             # Cache token with 5-minute buffer
             expires_at = current_time + expire - 300
-            NotifyFeishu._tenant_token_cache[self.app_id] = {
+            NotifyFeishu._tenant_token_cache[self.feishu_app_id] = {
                 "token": token,
                 "expires_at": expires_at,
             }
 
             self.logger.debug(
-                f"Successfully cached tenant_access_token for {self.app_id} "
+                f"Successfully cached tenant_access_token for {self.feishu_app_id} "
                 f"(expires in {expire - 300}s)"
             )
 
@@ -319,7 +319,7 @@ class NotifyFeishu(NotifyBase):
         """Send notification via Webhook mode."""
         # prepare our headers
         headers = {
-            "User-Agent": self.app_id,
+            "User-Agent": str(self.service_name),
             "Content-Type": "application/json",
         }
 
@@ -409,7 +409,7 @@ class NotifyFeishu(NotifyBase):
 
         # Prepare headers
         headers = {
-            "User-Agent": self.app_id,
+            "User-Agent": self.feishu_app_id,
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
         }
@@ -504,7 +504,7 @@ class NotifyFeishu(NotifyBase):
         if self.mode == FeishuMode.WEBHOOK:
             return (self.secure_protocol, self.token)
         else:  # App Mode
-            return (self.secure_protocol, self.app_id)
+            return (self.secure_protocol, self.feishu_app_id)
 
     def url(self, privacy=False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
@@ -519,10 +519,10 @@ class NotifyFeishu(NotifyBase):
                 params=NotifyFeishu.urlencode(params),
             )
         else:  # App Mode
-            return "{schema}://app/{app_id}/{app_secret}/{targets}/?{params}".format(
+            return "{schema}://app/{feishu_app_id}/{feishu_app_secret}/{targets}/?{params}".format(
                 schema=self.secure_protocol,
-                app_id=self.pprint(self.app_id, privacy, safe=""),
-                app_secret=self.pprint(self.app_secret, privacy, safe=""),
+                feishu_app_id=self.pprint(self.feishu_app_id, privacy, safe=""),
+                feishu_app_secret=self.pprint(self.feishu_app_secret, privacy, safe=""),
                 targets="/".join(
                     [NotifyFeishu.quote(target, safe="") for target in self.targets]
                 ),
@@ -552,7 +552,8 @@ class NotifyFeishu(NotifyBase):
         entries = NotifyFeishu.split_path(results["fullpath"])
 
         # Detect mode based on URL structure
-        if entries and entries[0].lower() == "app":
+        # Check if host is 'app' (for App Mode)
+        if results.get("host", "").lower() == "app":
             # App Mode: feishu://app/{app_id}/{app_secret}/{email1}/{email2}/...
             if len(entries) < 3:
                 # Not enough entries for App mode
@@ -563,9 +564,9 @@ class NotifyFeishu(NotifyBase):
                 )
                 return None
 
-            results["app_id"] = entries[1]
-            results["app_secret"] = entries[2]
-            results["targets"] = entries[3:]
+            results["app_id"] = entries[0]
+            results["app_secret"] = entries[1]
+            results["targets"] = entries[2:]
 
             # Ensure at least one target
             if not results["targets"]:
