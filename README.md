@@ -769,3 +769,4 @@ When adding a new extension, append one row — do not silently change existing 
 | Service | Extension | URL syntax | Notes |
 |---|---|---|---|
 | Feishu | App Mode | `feishu://app/AppID/AppSecret/Email[/Email...]` | Send a notification to one or more Feishu users by email via a self-built application. The original custom-bot Webhook mode (`feishu://Token`) still works unchanged; pick whichever fits your use case. |
+| DingTalk | Markdown rendering | `dingtalk://...?format=markdown` | Fixes upstream behaviour where `?format=markdown` produced an undeliverable payload (`msgtype` stayed `text` while data was placed under `markdown`). In this fork, `msgtype` is set to `markdown` and the title is also prepended to the body as a level-1 heading so it actually renders in the chat — `markdown.title` is still kept as the preview chip. Default mode remains text; opt in per URL with `?format=markdown`. |

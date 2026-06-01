@@ -26,10 +26,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 # Disable logging for a cleaner testing output
+import json
 import logging
+from unittest import mock
 
 from helpers import AppriseURLTester
+import requests
 
+import apprise
 from apprise.plugins.dingtalk import NotifyDingTalk
 
 logging.disable(logging.CRITICAL)
@@ -141,3 +145,87 @@ def test_plugin_dingtalk_urls():
 
     # Run our general tests
     AppriseURLTester(tests=apprise_url_tests).run_all()
+
+
+@mock.patch("requests.post")
+def test_plugin_dingtalk_payload_text(mock_post):
+    """NotifyDingTalk() default text payload has matching msgtype."""
+
+    response = requests.Request()
+    response.status_code = requests.codes.ok
+    mock_post.return_value = response
+
+    obj = apprise.Apprise.instantiate("dingtalk://{}".format("a" * 8))
+    assert isinstance(obj, NotifyDingTalk)
+    assert obj.notify(body="hello world", title="My Title") is True
+
+    payload = json.loads(mock_post.call_args.kwargs["data"])
+    assert payload["msgtype"] == "text"
+    assert "text" in payload
+    assert "markdown" not in payload
+    # In text mode title_maxlen is 0, so the framework folds title into body
+    assert "hello world" in payload["text"]["content"]
+
+
+@mock.patch("requests.post")
+def test_plugin_dingtalk_payload_markdown(mock_post):
+    """NotifyDingTalk() markdown payload uses markdown msgtype and prepends
+    the title as a level-1 heading to the body."""
+
+    response = requests.Request()
+    response.status_code = requests.codes.ok
+    mock_post.return_value = response
+
+    obj = apprise.Apprise.instantiate(
+        "dingtalk://{}?format=markdown".format("a" * 8)
+    )
+    assert isinstance(obj, NotifyDingTalk)
+    assert obj.notify(body="- item1\n- item2", title="Build Failed") is True
+
+    payload = json.loads(mock_post.call_args.kwargs["data"])
+    assert payload["msgtype"] == "markdown"
+    assert "markdown" in payload
+    assert "text" not in payload
+    # Preview chip is plain text (no leading '#')
+    assert payload["markdown"]["title"] == "Build Failed"
+    # Body starts with the title as an H1 so it actually renders in the chat
+    assert payload["markdown"]["text"].startswith("# Build Failed\n\n")
+    assert "- item1\n- item2" in payload["markdown"]["text"]
+
+
+@mock.patch("requests.post")
+def test_plugin_dingtalk_payload_markdown_title_with_hash(mock_post):
+    """NotifyDingTalk() markdown payload does not double-prepend '#' when the
+    title already starts with one, and the preview chip strips the hashes."""
+
+    response = requests.Request()
+    response.status_code = requests.codes.ok
+    mock_post.return_value = response
+
+    obj = apprise.Apprise.instantiate(
+        "dingtalk://{}?format=markdown".format("a" * 8)
+    )
+    assert obj.notify(body="body content", title="## Already H2") is True
+
+    payload = json.loads(mock_post.call_args.kwargs["data"])
+    assert payload["markdown"]["title"] == "Already H2"
+    assert payload["markdown"]["text"].startswith("## Already H2\n\n")
+
+
+@mock.patch("requests.post")
+def test_plugin_dingtalk_payload_markdown_no_title(mock_post):
+    """NotifyDingTalk() markdown payload falls back to app_desc for the
+    preview chip when no title is given (DingTalk requires it non-empty)."""
+
+    response = requests.Request()
+    response.status_code = requests.codes.ok
+    mock_post.return_value = response
+
+    obj = apprise.Apprise.instantiate(
+        "dingtalk://{}?format=markdown".format("a" * 8)
+    )
+    assert obj.notify(body="body only") is True
+
+    payload = json.loads(mock_post.call_args.kwargs["data"])
+    assert payload["markdown"]["title"]  # non-empty
+    assert payload["markdown"]["text"] == "body only"

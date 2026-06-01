@@ -194,7 +194,6 @@ class NotifyDingTalk(NotifyBase):
         """Perform DingTalk Notification."""
 
         payload = {
-            "msgtype": "text",
             "at": {
                 "atMobiles": self.targets,
                 "isAtAll": False,
@@ -202,12 +201,29 @@ class NotifyDingTalk(NotifyBase):
         }
 
         if self.notify_format == NotifyFormat.MARKDOWN:
+            # DingTalk renders `markdown.text` as the message body and uses
+            # `markdown.title` only as the preview chip in the chat list /
+            # push notification. The chip must be non-empty, or the API
+            # silently drops the message.
+            md_text = body
+            if title:
+                heading = (
+                    title if title.lstrip().startswith("#") else f"# {title}"
+                )
+                md_text = f"{heading}\n\n{body}" if body else heading
+
+            preview = title.lstrip("# \t") if title else ""
+            if not preview:
+                preview = self.app_desc
+
+            payload["msgtype"] = "markdown"
             payload["markdown"] = {
-                "title": title,
-                "text": body,
+                "title": preview,
+                "text": md_text,
             }
 
         else:
+            payload["msgtype"] = "text"
             payload["text"] = {
                 "content": body,
             }
