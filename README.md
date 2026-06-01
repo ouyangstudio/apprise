@@ -75,7 +75,7 @@ The table below identifies the services this tool supports and some example serv
 | [Enigma2](https://appriseit.com/services/enigma2/)  | enigma2:// or enigma2s:// | (TCP) 80 or 443 | enigma2://hostname
 | [Evolution API](https://appriseit.com/services/evolution/) | evolution:// or evolutions:// | (TCP) 80 or 443 | evolution://apikey@hostname/instance/ToPhoneNo<br/>evolution://apikey@hostname:port/instance/ToPhoneNo<br/>evolution://apikey@hostname/instance/ToPhoneNo1/ToPhoneNo2/ToPhoneNoN/
 | [FCM](https://appriseit.com/services/fcm/) | fcm://    | (TCP) 443    | fcm://project@apikey/DEVICE_ID<br />fcm://project@apikey/#TOPIC<br/>fcm://project@apikey/DEVICE_ID1/#topic1/#topic2/DEVICE_ID2/
-| [Feishu](https://appriseit.com/services/feishu/) | feishu://    | (TCP) 443    | feishu://token
+| [Feishu](https://appriseit.com/services/feishu/) | feishu://    | (TCP) 443    | feishu://Token<br/>feishu://app/AppID/AppSecret/Email[/Email...]
 | [Flock](https://appriseit.com/services/flock/) | flock://    | (TCP) 443    | flock://token<br/>flock://botname@token<br/>flock://app_token/u:userid<br/>flock://app_token/g:channel_id<br/>flock://app_token/u:userid/g:channel_id
 | [Google Chat](https://appriseit.com/services/googlechat/) | gchat://    | (TCP) 443    | gchat://workspace/key/token
 | [Gotify](https://appriseit.com/services/gotify/) | gotify:// or gotifys://   | (TCP) 80 or 443    | gotify://hostname/token<br />gotifys://hostname/token?priority=high
@@ -758,3 +758,14 @@ If you're interested in reading more about this and other methods on how to cust
 Want to help make Apprise better?
 * 💡 [Contribute to the Apprise Code Base](https://appriseit.com/contributing/)
 * ❤️ [Sponsorship and Donations](https://appriseit.com/contributing/sponsors/)
+
+## Fork Extensions
+
+This repository is a long-lived fork of [caronc/apprise](https://github.com/caronc/apprise).
+The table below lists every notification capability this fork adds **on top of** upstream, so the extra surface area stays easy to find and review.
+
+When adding a new extension, append one row — do not silently change existing services.
+
+| Service | Extension | URL syntax | Notes |
+|---|---|---|---|
+| Feishu | App Mode | `feishu://app/AppID/AppSecret/Email[/Email...]` | Send a notification to one or more Feishu users by email via a self-built application. The original custom-bot Webhook mode (`feishu://Token`) still works unchanged; pick whichever fits your use case. |
